@@ -196,9 +196,11 @@ def _get_service_pids(all_profiles: bool = False) -> set:
             try:
                 result = subprocess.run(["launchctl", "list"], timeout=5, **_CAPTURE_TEXT, check=False)
                 if result.returncode == 0:
+                    from hermes_constants import brand_launchd_prefix
+                    prefix = brand_launchd_prefix()
                     for line in result.stdout.strip().splitlines():
                         parts = line.split()
-                        if len(parts) >= 3 and parts[-1].startswith("ai.hermes.gateway"):
+                        if len(parts) >= 3 and parts[-1].startswith(prefix):
                             try:
                                 pid = int(parts[0])
                                 if pid > 0:
@@ -2855,10 +2857,10 @@ def get_systemd_linger_status(username: str | None = None) -> tuple[bool | None,
 
 
 def get_launchd_plist_path() -> Path:
-    """``~/Library/LaunchAgents/ai.hermes.gateway[-<profile>].plist`` under the real account home."""
+    """``~/Library/LaunchAgents/ai.<brand>.gateway[-<profile>].plist`` under the real account home."""
     import pwd
-    suffix = _profile_suffix()
-    name = f"ai.hermes.gateway-{suffix}" if suffix else "ai.hermes.gateway"
+    from hermes_constants import brand_launchd_label
+    name = brand_launchd_label(_profile_suffix())
     # Real account home: profile mode may point HOME at a profile dir. Sandboxed/app-hosted
     # shells can expose a UID that pwd cannot resolve (#57292); fall back to the shared
     # real-home resolver (HERMES_REAL_HOME → HOME → pwd → ~, profile home skipped) instead
@@ -2878,13 +2880,14 @@ def launchd_gateway_labels_for_install() -> list[str]:
     restarts another install's fleet. Names that can't map to a suffix are skipped."""
     import re as _re
     from hermes_cli.profiles import list_profiles
+    from hermes_constants import brand_launchd_label
     root_label: list[str] = []
     profile_labels: list[str] = []
     for profile in list_profiles():
         if profile.is_default:
-            root_label.append("ai.hermes.gateway")
+            root_label.append(brand_launchd_label())
         elif _re.match(r"^[a-z0-9][a-z0-9_-]{0,63}$", profile.name):
-            profile_labels.append(f"ai.hermes.gateway-{profile.name}")
+            profile_labels.append(brand_launchd_label(profile.name))
     return root_label + sorted(profile_labels)
 
 
@@ -2914,7 +2917,8 @@ def legacy_launchd_labels_for_install(exclude=()) -> list[str]:
         return []
     excluded = set(exclude)
     labels: set[str] = set()
-    for plist_path in sorted(agents_dir.glob("ai.hermes.gateway*.plist")):
+    from hermes_constants import brand_launchd_prefix
+    for plist_path in sorted(agents_dir.glob(f"{brand_launchd_prefix()}*.plist")):
         try:
             data = plistlib.loads(plist_path.read_bytes())
             label = data["Label"]
@@ -2922,7 +2926,7 @@ def legacy_launchd_labels_for_install(exclude=()) -> list[str]:
             rel = pinned.relative_to(root).parts
         except Exception:
             continue  # unreadable plist, no pinned home, or a home outside this root: not ours — fail closed
-        if not isinstance(label, str) or label in excluded or not label.startswith("ai.hermes.gateway"):
+        if not isinstance(label, str) or label in excluded or not label.startswith(brand_launchd_prefix()):
             continue
         if not rel or (len(rel) == 2 and rel[0] == "profiles"):
             labels.add(label)

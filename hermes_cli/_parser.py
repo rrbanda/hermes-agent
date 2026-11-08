@@ -229,9 +229,11 @@ def _build_chat_parser(subparsers) -> argparse.ArgumentParser:
     unless the flag is actually passed after the subcommand (tests/hermes_cli/
     test_argparse_flag_propagation.py).
     """
+    from hermes_constants import brand_display_name
+
     chat_parser = subparsers.add_parser(
         "chat", help="Interactive chat with the agent",
-        description="Start an interactive chat session with Hermes Agent")
+        description=f"Start an interactive chat session with {brand_display_name()}")
     add, inherited, SUPPRESS = chat_parser.add_argument, _inherited_flag, argparse.SUPPRESS
     _query_group = chat_parser.add_mutually_exclusive_group()
     _query_group.add_argument("-q", "--query", help=(
@@ -333,7 +335,9 @@ def _build_chat_parser(subparsers) -> argparse.ArgumentParser:
 def _plugin_command_install_hint(prog: str, value: str):
     """Install command when *value* names a catalog memory plugin that resolves nowhere: its
     ``hermes <name>`` command exists only once the plugin is installed. Top level only; never raises."""
-    if prog != "hermes" or not re.fullmatch(r"[a-z0-9_-]{1,64}", value):
+    from hermes_constants import brand_cli
+
+    if prog != brand_cli() or not re.fullmatch(r"[a-z0-9_-]{1,64}", value):
         return None
     try:
         from plugins.memory import find_provider_dir
@@ -380,6 +384,13 @@ class HermesArgumentParser(argparse.ArgumentParser):
         super()._check_value(action, value)
 
 
+def _branded_epilogue() -> str:
+    """Help examples use the branded command. Skill ids such as hermes-agent stay."""
+    from hermes_constants import apply_brand
+
+    return apply_brand(_EPILOGUE)
+
+
 def build_top_level_parser():
     """Build the top-level parser, the subparsers action, and the ``chat`` subparser.
 
@@ -387,9 +398,13 @@ def build_top_level_parser():
     ``chat_parser.set_defaults(func= cmd_chat)`` and registers further subparsers via
     ``subparsers.add_parser(...)``.
     """
+    from hermes_constants import brand_cli, brand_display_name
+
     parser = HermesArgumentParser(
-        prog="hermes", description="Hermes Agent - AI assistant with tool-calling capabilities",
-        formatter_class=argparse.RawDescriptionHelpFormatter, epilog=_EPILOGUE)
+        prog=brand_cli(),
+        description=f"{brand_display_name()} - AI assistant with tool-calling capabilities",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=_branded_epilogue())
     _add_top_level_flags(parser)
     # metavar keeps the usage line to ``hermes [...] <command>`` instead of the brace list of
     # every subcommand name; ``hermes --help`` still lists each command with its help row.

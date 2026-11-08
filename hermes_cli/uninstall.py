@@ -299,10 +299,13 @@ def _remove_systemd_gateway() -> bool:
 # label and the ``io.nousresearch.hermes-agent.gateway*`` label older builds
 # installed. An uninstall must sweep BOTH — a stale agent keeps respawning the
 # gateway after the code tree is gone (#62209).
-_LAUNCHD_GATEWAY_PLIST_PATTERNS = (
-    "ai.hermes.gateway*.plist",
-    "io.nousresearch.hermes-agent.gateway*.plist",
-)
+def _launchd_gateway_plist_patterns() -> tuple[str, ...]:
+    """Plists this build owns. A rebrand does not sweep an install still named Hermes."""
+    from hermes_constants import brand_cli, brand_launchd_prefix
+    patterns = [f"{brand_launchd_prefix()}*.plist"]
+    if brand_cli() == "hermes":
+        patterns.append("io.nousresearch.hermes-agent.gateway*.plist")
+    return tuple(patterns)
 
 
 def _launchd_gateway_plists() -> list[Path]:
@@ -310,13 +313,13 @@ def _launchd_gateway_plists() -> list[Path]:
     from hermes_cli.gateway import get_launchd_plist_path
 
     launch_agents = get_launchd_plist_path().parent
-    return sorted({p for pattern in _LAUNCHD_GATEWAY_PLIST_PATTERNS for p in launch_agents.glob(pattern)})
+    return sorted({p for pattern in _launchd_gateway_plist_patterns() for p in launch_agents.glob(pattern)})
 
 
 def _remove_launchd_gateway() -> bool:
     """macOS: boot out and uninstall every gateway LaunchAgent plist.
 
-    Sweeps BOTH label patterns (see ``_LAUNCHD_GATEWAY_PLIST_PATTERNS``):
+    Sweeps this build's label patterns (see ``_launchd_gateway_plist_patterns``):
     uninstalling only the current label's plist left older-label agents
     registered, and launchd kept respawning the gateway after removal.
     ``bootout`` (both Aqua and per-user domains, whichever holds the job) plus

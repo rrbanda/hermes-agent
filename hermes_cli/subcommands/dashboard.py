@@ -76,9 +76,12 @@ def build_serve_parser(
 def build_dashboard_parser(
     subparsers, *, cmd_dashboard: Callable, cmd_dashboard_register: Callable) -> None:
     """Attach ``dashboard`` (browser UI) and ``serve`` (headless backend the desktop spawns)."""
+    from hermes_constants import apply_brand
+
     dashboard_parser = subparsers.add_parser(
         "dashboard", help="Start the web UI dashboard",
-        description="Launch the Hermes Agent web dashboard for managing config, API keys, and sessions",
+        description=apply_brand(
+            "Launch the Hermes Agent web dashboard for managing config, API keys, and sessions"),
     )
     _add_server_runtime_args(dashboard_parser)
     dashboard_parser.add_argument(

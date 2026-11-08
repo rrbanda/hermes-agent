@@ -6,7 +6,7 @@
 # never re-add it here either.
 # DEFAULT_AGENT_IDENTITY only serves sessions with no SOUL.md at all (e.g. skip_context_files), which is not
 # the common case. See #95681.
-DEFAULT_SOUL_MD = (
+_UNBRANDED_SOUL_MD = (
     "You are Hermes Agent, built by Nous Research. Be direct: match the length of your reply to the weight of "
     "the ask — a one-line question gets a one-line answer, and finished work gets a short report of what "
     "changed, what's verified, and what's left, never a replay of the process. No filler (\"Great question,\" "
@@ -15,6 +15,19 @@ DEFAULT_SOUL_MD = (
     "right, not because the user said it. Depth is earned — give it when the user asks for detail, teaches, or "
     "the stakes demand it, not by default."
 )
+
+
+def _branded_soul_md(text: str) -> str:
+    """Persona text for this checkout. A rebrand drops the upstream maker credit."""
+    from hermes_constants import apply_brand, brand_cli
+
+    branded = apply_brand(text)
+    if brand_cli() != "hermes":
+        branded = branded.replace(", built by Nous Research", "")
+    return branded
+
+
+DEFAULT_SOUL_MD = _branded_soul_md(_UNBRANDED_SOUL_MD)
 
 _SCAFFOLD_HEAD = (
     "# Hermes Agent Persona\n\n<!--\nThis file defines the agent's personality and tone.\n"
@@ -52,6 +65,11 @@ _LEGACY_TEMPLATE_SOULS = (
     # tests/scripts/install/test_install_ps1_ascii_only.py); upgrading converges Windows installs on the em-dash text.
     DEFAULT_SOUL_MD.replace("\u2014", "--"),
 )
+if DEFAULT_SOUL_MD != _UNBRANDED_SOUL_MD:
+    _LEGACY_TEMPLATE_SOULS = _LEGACY_TEMPLATE_SOULS + (
+        _UNBRANDED_SOUL_MD,
+        _UNBRANDED_SOUL_MD.replace("\u2014", "--"),
+    )
 
 
 def _normalize_soul(text: str) -> str:

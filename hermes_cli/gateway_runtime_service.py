@@ -185,8 +185,9 @@ def _s6(home: Path, deadline: float) -> ExistingService | None:
 
 def _launchd(home: Path, deadline: float) -> ExistingService | None:
     import pwd
+    from hermes_constants import brand_launchd_label
     suffix = service_suffix(home)
-    label = f"ai.hermes.gateway{'-' + suffix if suffix else ''}"
+    label = brand_launchd_label(suffix)
     account = pwd.getpwuid(os.getuid())  # windows-footgun: ok — native launchd only
     account_home = Path(account.pw_dir)
     plist = account_home / "Library/LaunchAgents" / f"{label}.plist"

@@ -4,6 +4,7 @@ Import-safe, stdlib-only — importable from anywhere without circular-import ri
 """
 
 import contextlib
+import json
 import os
 import re
 import shutil
@@ -16,6 +17,106 @@ from pathlib import Path
 _profile_fallback_warned: bool = False
 _UNSET = object()
 _HERMES_HOME_OVERRIDE: ContextVar[str | object] = ContextVar("_HERMES_HOME_OVERRIDE", default=_UNSET)
+
+# User-facing names. Absent or invalid brand.json keeps the upstream Hermes names.
+_BRAND_CLI_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
+_BRAND_DEFAULTS = {"cli": "hermes", "name": "Hermes"}
+_brand_cache: dict[str, str] | None = None
+
+
+def brand_file_path() -> Path:
+    """``brand.json`` next to this module. The rebrand script writes it."""
+    return Path(__file__).resolve().parent / "brand.json"
+
+
+def load_brand() -> dict[str, str]:
+    """CLI token and display name. A missing or unusable file is Hermes."""
+    global _brand_cache
+    if _brand_cache is not None:
+        return _brand_cache
+    data = dict(_BRAND_DEFAULTS)
+    try:
+        raw = json.loads(brand_file_path().read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raw = None
+    if isinstance(raw, dict):
+        cli = str(raw.get("cli") or "").strip()
+        name = str(raw.get("name") or "").strip()
+        if _BRAND_CLI_RE.fullmatch(cli):
+            data["cli"] = cli
+        if name and "\n" not in name and "\r" not in name and len(name) <= 64:
+            data["name"] = name
+    _brand_cache = data
+    return data
+
+
+def clear_brand_cache() -> None:
+    """Drop the cached brand so a just-written ``brand.json`` is visible."""
+    global _brand_cache
+    _brand_cache = None
+
+
+def brand_cli() -> str:
+    """Command token (``hermes``, or the rebranded CLI name)."""
+    return load_brand()["cli"]
+
+
+def brand_name() -> str:
+    """Short display name used to build ``<name> Agent``."""
+    return load_brand()["name"]
+
+
+def brand_display_name() -> str:
+    """Banner and fallback identity, ``Hermes Agent`` unless rebranded."""
+    return f"{brand_name()} Agent"
+
+
+def brand_home_dirname() -> str:
+    """POSIX data directory under the user home (``.hermes`` unless rebranded)."""
+    return f".{brand_cli()}"
+
+
+def brand_data_dirname() -> str:
+    """Windows data directory under LocalAppData (``hermes`` unless rebranded)."""
+    return brand_cli()
+
+
+def brand_launchd_label(suffix: str = "") -> str:
+    """LaunchAgent label. ``suffix`` is the profile name; empty is the root job."""
+    base = f"ai.{brand_cli()}.gateway"
+    return f"{base}-{suffix}" if suffix else base
+
+
+def brand_launchd_prefix() -> str:
+    """Label prefix shared by the root job and every profile job."""
+    return f"ai.{brand_cli()}.gateway"
+
+
+def brand_command_names() -> tuple[str, str]:
+    """Published commands: the CLI, then its ACP entry."""
+    cli = brand_cli()
+    return (cli, f"{cli}-acp")
+
+
+def brand_entry_points() -> dict[str, tuple[str, str]]:
+    """Command name to ``(module, callable)``. Python modules stay ``hermes_*``."""
+    cli, acp = brand_command_names()
+    return {
+        cli: ("hermes_cli.main", "main"),
+        acp: ("acp_adapter.entry", "main"),
+    }
+
+
+def apply_brand(text: str) -> str:
+    """User-facing copy. The docs host and the ``hermes-agent`` skill id stay."""
+    cli = brand_cli()
+    branded = (text.replace("Hermes Agent", brand_display_name())
+               .replace("troubleshooting Hermes", f"troubleshooting {brand_name()}")
+               .replace("Hermes command console", f"{brand_name()} command console"))
+    if cli == "hermes":
+        return branded
+    return re.sub(r"(?<![\w-])hermes(?![\w-])", cli, branded)
+
 
 # TUI busy-indicator styles (CLI /indicator, TUI gateway config, /help registry).
 # Keep in sync with INDICATOR_STYLES / DEFAULT_INDICATOR_STYLE in ui-tui/src/app/interfaces.ts.
@@ -60,8 +161,8 @@ def _platform_default_hermes_home(environ: Mapping[str, str], user_home: Callabl
     if sys.platform == "win32":
         local_appdata = environ.get("LOCALAPPDATA", "").strip()
         base = Path(local_appdata) if local_appdata else user_home() / "AppData" / "Local"
-        return base / ("hermes" + suffix)
-    return user_home() / (".hermes" + suffix)
+        return base / (brand_data_dirname() + suffix)
+    return user_home() / (brand_home_dirname() + suffix)
 
 
 def _get_platform_default_hermes_home() -> Path:
@@ -155,7 +256,7 @@ def sudo_invoker_default_home() -> Path | None:
     import pwd
 
     try:
-        return Path(pwd.getpwnam(sudo_user).pw_dir) / ".hermes"
+        return Path(pwd.getpwnam(sudo_user).pw_dir) / brand_home_dirname()
     except KeyError:  # SUDO_USER not in passwd (chroot/container)
         return None
 
@@ -327,7 +428,7 @@ def _is_hermes_profiles_root(profiles_dir: Path) -> bool:
     ``profiles/.deleted`` tombstone dir (only ``profile delete`` creates it), or the default root.
     """
     root = profiles_dir.parent
-    if root.name == ".hermes":
+    if root.name == brand_home_dirname():
         return True
     try:
         if (profiles_dir / _DELETED_PROFILES_DIR).is_dir() or any(

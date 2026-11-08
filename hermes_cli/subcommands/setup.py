@@ -7,11 +7,14 @@ from typing import Callable
 
 def build_setup_parser(subparsers, *, cmd_setup: Callable) -> None:
     """Attach the ``setup`` subcommand to ``subparsers``."""
+    from hermes_constants import apply_brand
+
     setup_parser = subparsers.add_parser(
         "setup", help="Interactive setup wizard",
-        description="Configure Hermes Agent with an interactive wizard. "
-        "Run a specific section: "
-        "hermes setup model|tts|terminal|gateway|tools|telemetry|agent")
+        description=apply_brand(
+            "Configure Hermes Agent with an interactive wizard. "
+            "Run a specific section: "
+            "hermes setup model|tts|terminal|gateway|tools|telemetry|agent"))
     setup_parser.add_argument(
         "section", nargs="?",
         choices=["model", "tts", "terminal", "gateway", "tools", "telemetry", "agent"],

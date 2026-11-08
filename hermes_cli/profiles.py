@@ -1512,22 +1512,32 @@ _HERMES_ARGV_MARKERS = ("hermes_cli.main", "hermes-gateway", "tui_gateway")
 # `findOnPath('hermes')`) spawns the shim by handing the interpreter its path — then the
 # OS-reported argv[0] is the interpreter, not "hermes".
 _PYTHON_INTERPRETER_RE = re.compile(r"^python[\d.]*w?(\.exe)?$")
-# Console-script entry points this project ships (pyproject.toml [project.scripts]).
-# argv[1] is matched against exact names, not ``startswith("hermes")``: with a bare
-# interpreter argv[0], argv[1] can be ANY user script ("hermes-notes.py").
-_HERMES_CONSOLE_SCRIPT_NAMES = frozenset({"hermes", "hermes-agent", "hermes-acp"})
+# argv[1] is matched against exact command names, not a prefix: with a bare
+# interpreter argv[0], argv[1] can be any user script.
+def _console_script_names() -> frozenset[str]:
+    from hermes_constants import brand_command_names
+
+    return frozenset({*brand_command_names(), "hermes-agent"})
+
+
+def _is_brand_executable(exe_name: str) -> bool:
+    from hermes_constants import brand_cli
+
+    stem = os.path.basename(exe_name).lower().removesuffix(".exe")
+    cli = brand_cli()
+    return stem == cli or stem.startswith(f"{cli}-") or stem == "hermes-agent"
 
 
 def _is_hermes_argv(argv: list) -> bool:
-    """True for a Hermes process: entrypoint marker in argv, executable named ``hermes*``,
-    or a python interpreter directly exec'ing a known ``hermes`` console-script shim."""
+    """True for this product's process: entrypoint marker in argv, the branded
+    executable, or a python interpreter directly exec'ing one of its shims."""
     joined = " ".join(argv)
     exe_name = os.path.basename(argv[0]).lower()
-    if any(marker in joined for marker in _HERMES_ARGV_MARKERS) or exe_name.startswith("hermes"):
+    if any(marker in joined for marker in _HERMES_ARGV_MARKERS) or _is_brand_executable(exe_name):
         return True
     if len(argv) >= 2 and _PYTHON_INTERPRETER_RE.match(exe_name):
         script_name = os.path.basename(str(argv[1])).lower()
-        return script_name.rsplit(".", 1)[0] in _HERMES_CONSOLE_SCRIPT_NAMES
+        return script_name.rsplit(".", 1)[0] in _console_script_names()
     return False
 
 

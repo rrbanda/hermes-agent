@@ -76,8 +76,11 @@ def _launcher_bound_root(project_root: Path, candidates: list[Path]) -> Path | N
     """The candidate whose ``tools/`` holds the live interpreter the checkout's launcher execs."""
     from hermes_cli._launchers import _launcher_python
 
+    from hermes_constants import brand_cli
+
     local = project_root / ".hermes" / "bin"
-    for name in (("hermes.exe", "hermes.cmd") if os.name == "nt" else ("hermes",)):
+    cli = brand_cli()
+    for name in ((f"{cli}.exe", f"{cli}.cmd") if os.name == "nt" else (cli,)):
         python = _launcher_python(local / name)
         if python is None or not python.is_file():
             continue

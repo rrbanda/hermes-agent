@@ -9,9 +9,11 @@ from hermes_cli.subcommands._shared import add_json_flag
 
 def build_config_parser(subparsers, *, cmd_config: Callable) -> None:
     """Attach the ``config`` subcommand to ``subparsers``."""
+    from hermes_constants import apply_brand
+
     config_parser = subparsers.add_parser(
         "config", help="View and edit configuration",
-        description="Manage Hermes Agent configuration")
+        description=apply_brand("Manage Hermes Agent configuration"))
     config_subparsers = config_parser.add_subparsers(dest="config_command")
 
     config_subparsers.add_parser("show", help="Show current configuration")

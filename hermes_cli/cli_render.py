@@ -931,10 +931,12 @@ def _build_compact_banner() -> str:
     title_color = _color("banner_title", "#FFBF00")
     dim_color = _color("banner_dim", "#B8860B")
 
+    from hermes_constants import brand_display_name
+
     if (getattr(_skin, "name", "default") if _skin else "default") == "default":
-        tiny_line = "☤ NOUS HERMES"
+        tiny_line = f"☤ {brand_display_name().upper()}"
     else:
-        tiny_line = _skin.get_branding("agent_name", "Hermes Agent") if _skin else "Hermes Agent"
+        tiny_line = _skin.get_branding("agent_name", brand_display_name()) if _skin else brand_display_name()
     line1 = t("cli.render.banner_tagline", name=tiny_line)
 
     if os.environ.get("HERMES_FAST_STARTUP_BANNER") == "1":
@@ -947,7 +949,7 @@ def _build_compact_banner() -> str:
 
     w = min(shutil.get_terminal_size().columns - 2, 88)
     if w < 30:
-        return f"\n[{title_color}]{tiny_line}[/] [dim {dim_color}]- Nous Research[/]\n"
+        return f"\n[{title_color}]{tiny_line}[/] [dim {dim_color}]- {brand_display_name()}[/]\n"
 
     inner = w - 2  # inside the box border
     bar = "═" * w

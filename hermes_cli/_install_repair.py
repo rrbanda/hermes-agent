@@ -19,9 +19,10 @@ def _is_windows() -> bool:
 
 #: Launcher command names install.ps1's Set-PathVariable exposes from the
 #: managed binary dir (the default Hermes root's ``bin``, next to uv.exe)
-#: on the user PATH. Keep in lockstep with WINDOWS_BIN_LAUNCHERS in
-#: hermes_cli/_launchers.py and scripts/install.ps1.
-_WINDOWS_BIN_LAUNCHERS = ("hermes", "hermes-acp")
+#: on the user PATH. Same names as ``brand_command_names()``.
+from hermes_constants import brand_command_names
+
+_WINDOWS_BIN_LAUNCHERS = brand_command_names()
 
 
 def _normalize_windows_path(value) -> str:

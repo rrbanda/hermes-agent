@@ -7,9 +7,11 @@ from typing import Callable
 
 def build_status_parser(subparsers, *, cmd_status: Callable) -> None:
     """Attach the ``status`` subcommand to ``subparsers``."""
+    from hermes_constants import apply_brand
+
     status_parser = subparsers.add_parser(
         "status", help="Show status of all components",
-        description="Display status of Hermes Agent components")
+        description=apply_brand("Display status of Hermes Agent components"))
     status_parser.add_argument(
         "--full", "--all", dest="full", action="store_true",
         help="Show every section (keys redacted) instead of the one-screen summary")

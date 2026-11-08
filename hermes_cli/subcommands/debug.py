@@ -8,13 +8,16 @@ from typing import Callable
 
 def build_debug_parser(subparsers, *, cmd_debug: Callable) -> None:
     """Attach the ``debug`` subcommand to ``subparsers``."""
+    from hermes_constants import apply_brand
+
     debug_parser = subparsers.add_parser(
         "debug", help="Debug tools — upload logs and system info for support",
-        description="Debug utilities for Hermes Agent. Use 'hermes debug share' to "
-        "upload a debug report (system info + recent logs) to a paste "
-        "service and get a shareable URL.",
+        description=apply_brand(
+            "Debug utilities for Hermes Agent. Use 'hermes debug share' to "
+            "upload a debug report (system info + recent logs) to a paste "
+            "service and get a shareable URL."),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""\
+        epilog=apply_brand("""\
 Examples:
     hermes debug share              Upload debug report (asks for confirmation)
     hermes debug share --yes        Skip confirmation (for scripts/CI)
@@ -24,7 +27,7 @@ Examples:
     hermes debug share --no-redact  Disable upload-time secret redaction
     hermes debug share --nous       Upload to Nous-internal storage (private)
     hermes debug delete <url>       Delete a previously uploaded paste
-""")
+"""))
     debug_sub = debug_parser.add_subparsers(dest="debug_command")
     share_parser = debug_sub.add_parser(
         "share", help="Upload debug report to a paste service and print a shareable URL")

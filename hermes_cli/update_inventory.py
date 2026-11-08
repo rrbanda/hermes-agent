@@ -395,10 +395,11 @@ def _gateway_service_matches_profile(profile: str, service: object) -> bool:
     still credit the planned default gateway. A scope prefix (``user/hermes-gateway``,
     ``gui/501/ai.hermes.gateway``) is stripped the same way serve units are.
     """
+    from hermes_constants import brand_launchd_label
     name = str(service).removesuffix(".service").rsplit("/", 1)[-1]
     if profile == "default":
-        return name in {"hermes-gateway", "ai.hermes.gateway", "gateway", "gateway-default"}
-    return name in {f"hermes-gateway-{profile}", f"ai.hermes.gateway-{profile}", f"gateway-{profile}"}
+        return name in {"hermes-gateway", brand_launchd_label(), "gateway", "gateway-default"}
+    return name in {f"hermes-gateway-{profile}", brand_launchd_label(profile), f"gateway-{profile}"}
 
 
 def _gateway_named_in(r: RuntimeRecord, names: set) -> bool:

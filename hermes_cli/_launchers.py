@@ -95,19 +95,16 @@ def installation_command(repo_root: Path, args=(), *, module: str = "hermes_cli.
     root = Path(repo_root)
     if resolve_store_python(root) is None:
         return runtime_command(root, args, module=module, python=python, home=home)
+    from hermes_constants import brand_cli
     prefix = [] if module == "hermes_cli.main" else ["--run-module", module]
-    return [str(root / ".hermes" / "bin" / "hermes"), *prefix, *args]
+    return [str(root / ".hermes" / "bin" / brand_cli()), *prefix, *args]
 
-#: Launcher command names — keep in lockstep with scripts/install.ps1
-#: Publish-UserCommand and hermes_cli/_install_repair.py.
-WINDOWS_BIN_LAUNCHERS = ("hermes", "hermes-acp")
+#: Launcher command names. install.ps1 Publish-UserCommand runs this module,
+#: so the names come from brand.json rather than a second copy here.
+from hermes_constants import brand_command_names, brand_entry_points
 
-#: command name -> (entry module, callable) — mirrors pyproject.toml
-#: [project.scripts].
-ENTRY_POINTS = {
-    "hermes": ("hermes_cli.main", "main"),
-    "hermes-acp": ("acp_adapter.entry", "main"),
-}
+WINDOWS_BIN_LAUNCHERS = brand_command_names()
+ENTRY_POINTS = brand_entry_points()
 
 
 def _is_windows() -> bool:
@@ -505,7 +502,7 @@ def _launcher_script(name: str, repo_root: Path, dependencies: Path | None) -> s
         "    os.environ['HERMES_HOME'] = str(get_default_hermes_root())\n"
         "if sys.argv[1:2] == ['--run-module']:\n"
         "    import runpy\n"
-        "    if len(sys.argv) < 3: sys.exit('hermes: --run-module needs a module')\n"
+        f"    if len(sys.argv) < 3: sys.exit({name + ': --run-module needs a module'!r})\n"
         "    module = sys.argv.pop(2)\n"
         "    del sys.argv[1]\n"
         "    runpy.run_module(module, run_name='__main__', alter_sys=True)\n"
@@ -544,19 +541,22 @@ def _owns_launcher(target: Path, root: Path) -> bool:
         tokens = shlex.split(target.read_text(encoding="utf-8-sig"), comments=True)
     except (OSError, UnicodeError, ValueError):
         return False
+    from hermes_constants import brand_cli
+    cli = brand_cli()
+    acp = f"{cli}-acp"
     paths = {str(root / p) for p in (
-        "hermes", "run_agent.py", "venv/bin/python", "venv/bin/python3",
-        "venv/bin/hermes",
-        ".hermes/bin/hermes", ".hermes/bin/hermes-acp",
+        cli, "run_agent.py", "venv/bin/python", "venv/bin/python3",
+        f"venv/bin/{cli}",
+        f".hermes/bin/{cli}", f".hermes/bin/{acp}",
     )}
     # Current store launchers pass this Python bootstrap as one shell argument.
     bootstrap = f"sys.path.insert(0, {str(root)!r})"
     if paths.intersection(tokens) or any(bootstrap in token for token in tokens):
         return True
-    # The historical updater wrote ACP as a sibling-hermes forwarder. Adopt
+    # The historical updater wrote ACP as a sibling forwarder. Adopt
     # it only when that sibling demonstrably belongs to this installation.
-    if target.name == "hermes-acp":
-        sibling = target.with_name("hermes")
+    if target.name == acp:
+        sibling = target.with_name(cli)
         return (tokens == ["exec", str(sibling), "acp", "$@"]
                 and _owns_launcher(sibling, root))
     return False
@@ -574,7 +574,8 @@ def _publish_conveniences(root: Path, out_dir: Path, names, *, create: bool = Tr
         if (not create or target.exists() or target.is_symlink()) and not _owns_launcher(target, root):
             continue
         before = target.lstat().st_mtime_ns if target.exists() or target.is_symlink() else None
-        command = ([str(root / ".hermes/bin/hermes"), "--run-module", "run_agent"]
+        from hermes_constants import brand_cli
+        command = ([str(root / ".hermes/bin" / brand_cli()), "--run-module", "run_agent"]
                    if name == "hermes-agent" else [str(root / ".hermes/bin" / name)])
         if _write_shell(target, command) is None:
             raise OSError(f"could not publish launcher {target}")

@@ -35,6 +35,31 @@ def test_cprint_falls_back_to_plain_print_when_prompt_toolkit_has_no_console(cap
 
     assert capsys.readouterr().out == "fallback text\n"
 
+def _banner_text(model, provider):
+    with (
+        patch.object(model_tools, "check_tool_availability", return_value=([], [])),
+        patch.object(banner, "get_available_skills", return_value={}),
+        patch.object(banner, "get_update_result", return_value=None),
+        patch.object(tools.mcp_tool_discovery, "get_mcp_status", return_value=[]),
+    ):
+        console = Console(record=True, force_terminal=False, color_system=None, width=160)
+        banner.build_welcome_banner(console=console, model=model, cwd="/tmp/project", tools=[],
+                                    enabled_toolsets=[], provider=provider)
+    return console.export_text()
+
+
+def test_custom_provider_banner_omits_nous_credit():
+    """A custom endpoint is not a Nous login, so the model line must not credit Nous Research."""
+    text = _banner_text("publishers/prelude-maas/models/nemotron-cascade-2-30b", "custom")
+    assert "nemotron-cascade-2-30b" in text
+    assert "Nous Research" not in text
+
+
+def test_nous_provider_banner_keeps_nous_credit():
+    text = _banner_text("hermes-4", "nous")
+    assert "Nous Research" in text
+
+
 def test_empty_model_shows_no_model_configured(tmp_path, monkeypatch):
     """The banner prints before credentials resolve; with no model it says so rather than guessing."""
     monkeypatch.setenv("HERMES_HOME", str(tmp_path / ".hermes"))

@@ -157,18 +157,26 @@ def _strip_yaml_frontmatter(content: str) -> str:
     return (content[end + 4:].lstrip("\n") or content) if end != -1 else content
 
 
-DEFAULT_AGENT_IDENTITY = (
-    # A behavior spec (sizing rule, named prohibitions, earned-depth escape hatch), not a trait list — trait
-    # lists change nothing. Maintainer rule: models UNDER-explore by default; never re-add an exploration-thrift line.
-    "You are Hermes Agent, built by Nous Research. Be direct: match the length of your reply to the weight of the ask "
-    "— a one-line question gets a one-line answer, and finished work gets a short report of what changed, what's "
-    "verified, and what's left, never a replay of the process. No filler (\"Great question,\" \"I'd be happy to\"), no "
-    "restating the request back, no re-summarizing what you already said, no narrating tool calls the user can see. "
-    "Plain claims over adjectives; when unsure, say so plainly. Agree because it's right, not because the user said "
-    "it. Depth is earned — give it when the user asks for detail, teaches, or the stakes demand it, not by default."
-)
+def _apply_brand_name(text: str) -> str:
+    """Swap the fallback product name. The docs URL and ``hermes-agent`` skill stay."""
+    from hermes_constants import apply_brand
+    return apply_brand(text)
 
-HERMES_AGENT_HELP_GUIDANCE = (
+
+def _default_agent_identity() -> str:
+    """Same text ``hermes_cli.default_soul`` seeds into SOUL.md.
+
+    Import stays inside the function so default_soul does not import this module.
+    A behavior spec (sizing rule, named prohibitions, earned-depth escape hatch), not a trait list —
+    trait lists change nothing. Models under-explore by default; never re-add an exploration-thrift line.
+    """
+    from hermes_cli.default_soul import DEFAULT_SOUL_MD
+    return DEFAULT_SOUL_MD
+
+
+DEFAULT_AGENT_IDENTITY = _default_agent_identity()
+
+HERMES_AGENT_HELP_GUIDANCE = _apply_brand_name(
     # Injected only when skill_view exists AND the hermes-agent skill is installed (system_prompt.py slot
     # resolution). No "when the two differ" clause: docs-are-authoritative already carries the precedence.
     # Names Hermes Agent without restating identity: SOUL.md line 1 already says who you are, while a custom
@@ -182,7 +190,7 @@ HERMES_AGENT_HELP_GUIDANCE = (
 )
 
 # Variant for sessions without the skills toolset (e.g. Blank Slate): naming skill_view() there would dangle.
-HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS = (
+HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS = _apply_brand_name(
     "For help with Hermes Agent itself — configuring, setting up, using, extending, or troubleshooting it — "
     "or to understand your own features, tools, or capabilities, the documentation at "
     "https://hermes-agent.nousresearch.com/docs is the "
