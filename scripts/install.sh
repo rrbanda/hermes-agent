@@ -1150,23 +1150,37 @@ stage_config() {
 # node in its mount namespace but opening it fails (ENXIO).
 has_terminal() { (: </dev/tty) 2>/dev/null; }
 
+# Command token from brand.json. A missing file is the upstream hermes command.
+brand_cli_name() {
+    local cli="hermes" parsed file="$INSTALL_DIR/brand.json"
+    if [ -f "$file" ]; then
+        parsed=$(sed -n 's/.*"cli"[[:space:]]*:[[:space:]]*"\([a-z][a-z0-9-]*\)".*/\1/p' "$file" | head -n 1)
+        [ -n "$parsed" ] && cli="$parsed"
+    fi
+    printf '%s\n' "$cli"
+}
+
+brand_launcher() {
+    printf '%s\n' "$INSTALL_DIR/.hermes/bin/$(brand_cli_name)"
+}
+
 stage_setup() {
     if [ "$NON_INTERACTIVE" = true ]; then return 0; fi
     if ! has_terminal; then
-        log "setup skipped (no terminal); run 'hermes setup' after install"
+        log "setup skipped (no terminal); run '$(brand_cli_name) setup' after install"
         return 0
     fi
-    "$INSTALL_DIR/.hermes/bin/hermes" setup </dev/tty || fail "setup failed" setup_failed
+    "$(brand_launcher)" setup </dev/tty || fail "setup failed" setup_failed
 }
 
 stage_gateway() {
     if [ "$NON_INTERACTIVE" = true ]; then return 0; fi
     if ! has_terminal; then
-        log "gateway setup skipped (no terminal); run 'hermes gateway install' after install"
+        log "gateway setup skipped (no terminal); run '$(brand_cli_name) gateway install' after install"
         return 0
     fi
     # Setup installs the service when it handles the gateway; ask only if it did not.
-    "$INSTALL_DIR/.hermes/bin/hermes" gateway install --if-missing </dev/tty || fail "gateway installation failed" gateway_failed
+    "$(brand_launcher)" gateway install --if-missing </dev/tty || fail "gateway installation failed" gateway_failed
 }
 
 stage_complete() {
@@ -1179,10 +1193,10 @@ stage_complete() {
         mv -f "$INSTALL_DIR/.hermes-bootstrap-complete.tmp" "$INSTALL_DIR/.hermes-bootstrap-complete"
     fi
     if [ -n "$CHANNEL" ]; then
-        "$INSTALL_DIR/.hermes/bin/hermes" update --set-channel "$CHANNEL" \
+        "$(brand_launcher)" update --set-channel "$CHANNEL" \
             || fail "could not save the $CHANNEL update channel" other
     fi
-    log_success "Hermes Agent install complete. Run: hermes"
+    log_success "Install complete. Run: $(brand_cli_name)"
 }
 
 print_path_reload_hint() {
