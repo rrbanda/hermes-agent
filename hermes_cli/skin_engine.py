@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from hermes_constants import brand_name, get_hermes_home
+from hermes_constants import brand_cli, brand_hero, brand_name, brand_tagline, get_hermes_home
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +43,17 @@ class SkinConfig:
 
 def _branding(who: str, symbol: str, goodbye: str, prompt: str = "", help_header: str = "") -> dict[str, str]:
     """Branding block for a "<who> Agent" persona keyed by its glyph."""
-    return {
+    block = {
         "agent_name": f"{who} Agent",
         "welcome": f"Welcome to {who} Agent! Type your message or /help for commands.",
         "goodbye": goodbye, "response_label": f" {symbol} {who} ", "prompt_symbol": prompt or symbol,
         "help_header": help_header or f"({symbol}) Available Commands"}
+    # A renamed checkout owns the slogan and the session-panel figure. Empty hides
+    # each one. Hermes keeps the translated slogan and the caduceus.
+    if brand_cli() != "hermes":
+        block["tagline"] = brand_tagline()
+        block["hero"] = brand_hero()
+    return block
 
 
 def _wings(*glyphs) -> list[list[str]]:

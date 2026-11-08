@@ -55,6 +55,52 @@ def test_second_rebrand_replaces_the_previous_name(tmp_path: Path):
     assert "xyz-acp = " not in text
 
 
+def test_a_later_rebrand_keeps_the_banner_tagline(tmp_path: Path):
+    module = _rebrand_module(tmp_path)
+    module.rebrand("acme", "Acme", "Your banner line")
+    module.rebrand("acme", "Acme")
+    brand = json.loads((tmp_path / "brand.json").read_text(encoding="utf-8"))
+    assert brand["tagline"] == "Your banner line"
+
+
+def test_an_empty_tagline_clears_the_banner_slogan(tmp_path: Path):
+    module = _rebrand_module(tmp_path)
+    module.rebrand("acme", "Acme", "Your banner line")
+    module.rebrand("acme", "Acme", "  ")
+    brand = json.loads((tmp_path / "brand.json").read_text(encoding="utf-8"))
+    assert brand == {"cli": "acme", "name": "Acme"}
+
+
+def test_a_later_rebrand_keeps_the_session_figure(tmp_path: Path):
+    module = _rebrand_module(tmp_path)
+    module.rebrand("acme", "Acme", hero="X\nY")
+    module.rebrand("acme", "Acme")
+    brand = json.loads((tmp_path / "brand.json").read_text(encoding="utf-8"))
+    assert brand["hero"] == "X\nY"
+
+
+def test_an_empty_hero_clears_the_session_figure(tmp_path: Path):
+    module = _rebrand_module(tmp_path)
+    module.rebrand("acme", "Acme", hero="X")
+    module.rebrand("acme", "Acme", hero="  ")
+    brand = json.loads((tmp_path / "brand.json").read_text(encoding="utf-8"))
+    assert brand == {"cli": "acme", "name": "Acme"}
+
+
+def test_rebrand_rejects_a_hero_that_is_too_wide(tmp_path: Path):
+    module = _rebrand_module(tmp_path)
+    with pytest.raises(SystemExit):
+        module.rebrand("acme", "Acme", hero="x" * 81)
+    assert not (tmp_path / "brand.json").exists()
+
+
+def test_rebrand_rejects_a_multiline_tagline(tmp_path: Path):
+    module = _rebrand_module(tmp_path)
+    with pytest.raises(SystemExit):
+        module.rebrand("acme", "Acme", "one\ntwo")
+    assert not (tmp_path / "brand.json").exists()
+
+
 @pytest.mark.parametrize("cli,name", [("Xyz", "Xyz"), ("", "Acme"), ("acme", ""), ("acme", "A\nB")])
 def test_rebrand_rejects_a_bad_cli_or_name(tmp_path: Path, cli: str, name: str):
     module = _rebrand_module(tmp_path)

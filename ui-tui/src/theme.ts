@@ -58,6 +58,10 @@ export interface ThemeBrand {
   goodbye: string
   tool: string
   helpHeader: string
+  /** Set by a renamed checkout. Empty hides the slogan. Unset keeps the translated one. */
+  tagline?: string
+  /** Set by a renamed checkout. Empty hides the session-panel figure. Unset keeps the caduceus. */
+  hero?: string
 }
 
 export interface Theme {
@@ -959,7 +963,9 @@ export function fromSkin(
         welcome: branding.welcome ?? d.brand.welcome,
         goodbye: branding.goodbye ?? d.brand.goodbye,
         tool: toolPrefix || d.brand.tool,
-        helpHeader: branding.help_header ?? (helpHeader || d.brand.helpHeader)
+        helpHeader: branding.help_header ?? (helpHeader || d.brand.helpHeader),
+        ...(typeof branding.tagline === 'string' ? { tagline: branding.tagline } : {}),
+        ...(typeof branding.hero === 'string' ? { hero: branding.hero } : {})
       },
 
       bannerLogo,

@@ -193,6 +193,8 @@ const themesEqual = (a: Theme, b: Theme) => {
   return (
     a.brand.name === b.brand.name &&
     a.brand.prompt === b.brand.prompt &&
+    a.brand.tagline === b.brand.tagline &&
+    a.brand.hero === b.brand.hero &&
     a.bannerLogo === b.bannerLogo &&
     a.bannerHero === b.bannerHero
   )

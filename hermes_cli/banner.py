@@ -720,9 +720,15 @@ def build_welcome_banner(
     accent = _skin_color("banner_accent", "#FFBF00")
     dim = _skin_color("banner_dim", "#B8860B")
     text = _skin_color("banner_text", "#FFF8DC")
-    # Use skin's custom caduceus art if provided
+    # A skin figure wins. A renamed checkout with none hides the caduceus.
     _bskin = _quiet(_active_skin)
-    left_lines = ["", getattr(_bskin, "banner_hero", None) or HERMES_CADUCEUS, ""]
+    skin_hero = getattr(_bskin, "banner_hero", None) or ""
+    if skin_hero:
+        art = skin_hero
+    else:
+        from hermes_constants import brand_cli, brand_hero
+        art = brand_hero() if brand_cli() != "hermes" else HERMES_CADUCEUS
+    left_lines = ["", art, ""] if art else [""]
     left_lines += _banner_left_lines(model, cwd, session_id, context_length, provider, accent=accent, dim=dim,
                                      context_pinned=context_pinned, context_marker=context_marker)
     right_lines = _banner_tool_lines(

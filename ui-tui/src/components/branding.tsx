@@ -4,7 +4,7 @@ import type { SessionInfo } from '@hermes/shared/gateway-types'
 import { useEffect, useState } from 'react'
 import unicodeSpinners from 'unicode-animations'
 
-import { artWidth, caduceus, CADUCEUS_WIDTH, logo, LOGO_WIDTH } from '../banner.js'
+import { artWidth, bannerSlogan, CADUCEUS_WIDTH, logo, LOGO_WIDTH, sessionHero } from '../banner.js'
 import { useT } from '../i18n/useT.js'
 import { flat } from '../lib/text.js'
 import type { Theme } from '../theme.js'
@@ -56,10 +56,17 @@ export function ArtLines({ lines }: { lines: [string, string][] }) {
 // Terminals can't scale glyphs, so "responsive" means picking a layout that
 // fits the available columns. Thresholds are picked so each tier reads
 // comfortably without forcing wrap or truncation drift on box-drawing edges.
-// Taglines live in the catalog (chatBits.branding.tagFull/tagMid); the tiny
-// tier is the bare brand name and stays untranslated.
+// Hermes taglines live in the catalog (chatBits.branding.tagFull/tagMid); the
+// tiny tier is the bare brand name and stays untranslated. A renamed checkout
+// sends brand.tagline instead, and an empty one hides the row.
 const TAG_TINY = 'Nous Research'
 const HIDE_BELOW = 34
+
+/** A renamed checkout sends its own slogan, including an empty one. Hermes leaves it unset. */
+function bannerTagline(t: Theme, fallback: string): string | null {
+  return bannerSlogan(t.brand.name, t.brand.tagline, fallback)
+}
+
 const COMPACT_FROM = 58
 
 const clip = (s: string, w: number) => (w <= 0 ? '' : s.length > w ? `${s.slice(0, Math.max(0, w - 1))}…` : s)
@@ -82,6 +89,7 @@ const ruleIn = (label: string, w: number) => {
 
 function CompactBanner({ cols, t }: { cols: number; t: Theme }) {
   const T = useT().chatBits.branding
+  const tag = bannerTagline(t, T.tagFull)
   // -4 keeps a margin so exact-edge rows don't trip terminal pending-wrap.
   const w = Math.max(28, cols - 4)
 
@@ -95,9 +103,9 @@ function CompactBanner({ cols, t }: { cols: number; t: Theme }) {
   // only stylistic delta was bold). Bold on short label runs is fine; bold on
   // full-width box-drawing rows is what triggers the slab.
   return (
-    <Box flexDirection="column" height={3} marginBottom={1} width={w}>
+    <Box flexDirection="column" height={tag ? 3 : 2} marginBottom={1} width={w}>
       <Text color={t.color.primary}>{ruleIn(t.brand.name, w)}</Text>
-      <Text color={t.color.muted}>{centerIn(T.tagFull, w)}</Text>
+      {tag ? <Text color={t.color.muted}>{centerIn(tag, w)}</Text> : null}
       <Text color={t.color.primary}>{'─'.repeat(w)}</Text>
     </Box>
   )
@@ -112,8 +120,10 @@ export function Banner({ maxWidth, t }: { maxWidth?: number; t: Theme }) {
     return null
   }
 
-  const logoLines = logo(t.color, t.bannerLogo || undefined)
-  const logoW = t.bannerLogo ? artWidth(logoLines) : LOGO_WIDTH
+  const logoLines = logo(t.color, t.bannerLogo || undefined, t.brand.name)
+  const logoW = artWidth(logoLines) || LOGO_WIDTH
+  const ownedTagline = typeof t.brand.tagline === 'string'
+  const fullTag = bannerTagline(t, T.tagFull)
 
   // Each tier renders its rows through a single-column WidgetGrid sized to
   // the available columns — same visual output as the old plain flex column
@@ -131,14 +141,18 @@ export function Banner({ maxWidth, t }: { maxWidth?: number; t: Theme }) {
           rowGap={0}
           widgets={[
             { children: <ArtLines lines={logoLines} />, id: 'banner-art' },
-            {
-              children: (
-                <Text color={t.color.muted} wrap="truncate-end">
-                  {t.brand.icon} {T.tagFull}
-                </Text>
-              ),
-              id: 'banner-tagline'
-            }
+            ...(fullTag
+              ? [
+                  {
+                    children: (
+                      <Text color={t.color.muted} wrap="truncate-end">
+                        {ownedTagline ? fullTag : `${t.brand.icon} ${fullTag}`}
+                      </Text>
+                    ),
+                    id: 'banner-tagline'
+                  }
+                ]
+              : [])
           ]}
         />
       </Box>
@@ -160,7 +174,8 @@ export function Banner({ maxWidth, t }: { maxWidth?: number; t: Theme }) {
   }
 
   const name = cols >= 52 ? t.brand.name : (t.brand.name.split(' ')[0] ?? t.brand.name)
-  const tag = cols >= 64 ? T.tagFull : cols >= 46 ? T.tagMid : TAG_TINY
+  const narrowFallback = cols >= 64 ? T.tagFull : cols >= 46 ? T.tagMid : TAG_TINY
+  const narrowTag = bannerTagline(t, narrowFallback)
 
   return (
     <Box flexDirection="column" marginBottom={1}>
@@ -180,14 +195,18 @@ export function Banner({ maxWidth, t }: { maxWidth?: number; t: Theme }) {
             ),
             id: 'banner-name'
           },
-          {
-            children: (
-              <Text color={t.color.muted} wrap="truncate-end">
-                {t.brand.icon} {tag}
-              </Text>
-            ),
-            id: 'banner-tag'
-          }
+          ...(narrowTag
+            ? [
+                {
+                  children: (
+                    <Text color={t.color.muted} wrap="truncate-end">
+                      {ownedTagline ? narrowTag : `${t.brand.icon} ${narrowTag}`}
+                    </Text>
+                  ),
+                  id: 'banner-tag'
+                }
+              ]
+            : [])
         ]}
       />
     </Box>
@@ -217,8 +236,8 @@ export function SessionPanel({ info, maxWidth, sid, t }: SessionPanelProps) {
   const T = useT().chatBits.branding
   const term = useStdout().stdout?.columns ?? 100
   const cols = Math.max(20, Math.min(term, maxWidth ?? term))
-  const heroLines = caduceus(t.color, t.bannerHero || undefined)
-  const leftW = Math.min((artWidth(heroLines) || CADUCEUS_WIDTH) + 4, Math.floor(cols * 0.4))
+  const heroLines = sessionHero(t.color, t.bannerHero, t.brand.hero, t.brand.name)
+  const leftW = Math.min((heroLines ? artWidth(heroLines) || CADUCEUS_WIDTH : 36) + 4, Math.floor(cols * 0.4))
   const wide = cols >= 90 && leftW + 40 < cols
   const w = Math.max(20, wide ? cols - leftW - 14 : cols - 12)
   const lineBudget = Math.max(12, w - 2)
@@ -367,8 +386,8 @@ export function SessionPanel({ info, maxWidth, sid, t }: SessionPanelProps) {
   // hand-rolled widths exactly: usable = (leftW + 2 + w) - gap = leftW + w.
   const heroColumn = wide ? (
     <Box flexDirection="column" width="100%">
-      <ArtLines lines={heroLines} />
-      <Text />
+      {heroLines ? <ArtLines lines={heroLines} /> : null}
+      {heroLines ? <Text /> : null}
 
       <Text color={t.color.accent}>
         {(info.model ?? '').split('/').pop()}

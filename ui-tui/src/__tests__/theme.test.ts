@@ -238,6 +238,22 @@ describe('fromSkin', () => {
     expect(brand.prompt).toBe('$')
   })
 
+  it('keeps a checkout tagline and leaves an unset slogan to the catalog', async () => {
+    const { fromSkin } = await importThemeWithCleanEnv()
+
+    expect(fromSkin({}, { tagline: 'Your banner line' }).brand.tagline).toBe('Your banner line')
+    expect(fromSkin({}, { tagline: '' }).brand.tagline).toBe('')
+    expect(fromSkin({}, {}).brand.tagline).toBeUndefined()
+  })
+
+  it('keeps a checkout figure and leaves an unset figure to the caduceus', async () => {
+    const { fromSkin } = await importThemeWithCleanEnv()
+
+    expect(fromSkin({}, { hero: 'X' }).brand.hero).toBe('X')
+    expect(fromSkin({}, { hero: '' }).brand.hero).toBe('')
+    expect(fromSkin({}, {}).brand.hero).toBeUndefined()
+  })
+
   it('normalizes skin prompt symbols to trimmed single-line text', async () => {
     const { DEFAULT_THEME, fromSkin } = await importThemeWithCleanEnv()
 

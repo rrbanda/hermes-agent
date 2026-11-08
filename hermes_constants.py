@@ -21,7 +21,26 @@ _HERMES_HOME_OVERRIDE: ContextVar[str | object] = ContextVar("_HERMES_HOME_OVERR
 # User-facing names. Absent or invalid brand.json keeps the upstream Hermes names.
 _BRAND_CLI_RE = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 _BRAND_DEFAULTS = {"cli": "hermes", "name": "Hermes"}
+_HERO_MAX_LINES = 30
+_HERO_MAX_COLS = 80
+_HERO_MAX_CHARS = 4000
 _brand_cache: dict[str, str] | None = None
+
+
+def accepted_brand_hero(text: str) -> str:
+    """Session-panel figure. Empty when missing, blank, or larger than the panel slot."""
+    if "\x00" in text or len(text) > _HERO_MAX_CHARS:
+        return ""
+    lines = [line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n")]
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    if not lines or len(lines) > _HERO_MAX_LINES:
+        return ""
+    if any(len(line) > _HERO_MAX_COLS or any(ord(ch) < 32 for ch in line) for line in lines):
+        return ""
+    return "\n".join(lines)
 
 
 def brand_file_path() -> Path:
@@ -46,6 +65,16 @@ def load_brand() -> dict[str, str]:
             data["cli"] = cli
         if name and "\n" not in name and "\r" not in name and len(name) <= 64:
             data["name"] = name
+        tagline = raw.get("tagline")
+        if isinstance(tagline, str):
+            tagline = tagline.strip()
+            if tagline and "\n" not in tagline and "\r" not in tagline and len(tagline) <= 120:
+                data["tagline"] = tagline
+        hero = raw.get("hero")
+        if isinstance(hero, str):
+            hero = accepted_brand_hero(hero)
+            if hero:
+                data["hero"] = hero
     _brand_cache = data
     return data
 
@@ -69,6 +98,16 @@ def brand_name() -> str:
 def brand_display_name() -> str:
     """Banner and fallback identity, ``Hermes Agent`` unless rebranded."""
     return f"{brand_name()} Agent"
+
+
+def brand_tagline() -> str:
+    """Chat-banner slogan. Empty unless ``brand.json`` sets ``tagline``."""
+    return load_brand().get("tagline", "")
+
+
+def brand_hero() -> str:
+    """Session-panel figure. Empty unless ``brand.json`` sets ``hero``."""
+    return load_brand().get("hero", "")
 
 
 def brand_home_dirname() -> str:

@@ -107,6 +107,7 @@ import { useTheme } from "@/themes";
 import { isDashboardEmbeddedChatEnabled } from "@/lib/dashboard-flags";
 import { latchChatActivation } from "@/lib/chat-activation";
 import { sharedGatewayProfiles, sharedGatewayRestartDescription } from "@/lib/shared-gateway";
+import { dashboardProductLines, dashboardProductName } from "@/lib/product-name";
 import { api } from "@/lib/api";
 import type { StatusResponse, UpdateCheckResponse } from "@/lib/api";
 
@@ -512,6 +513,9 @@ export default function App() {
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
+  const productName = dashboardProductName();
+  const [productLine, productTail] = dashboardProductLines(productName);
+
   return (
     <div
       data-layout-variant={layoutVariant}
@@ -553,7 +557,7 @@ export default function App() {
         </Button>
 
         <Typography className="font-bold text-[0.95rem] leading-[0.95] tracking-[0.05em] text-midground">
-          {t.app.brand}
+          {productName}
         </Typography>
       </header>
 
@@ -618,9 +622,13 @@ export default function App() {
                 <PluginSlot name="header-left" />
 
                 <Typography className="font-bold text-[1.125rem] leading-[0.95] tracking-[0.0525rem] text-midground uppercase">
-                  Hermes
-                  <br />
-                  Agent
+                  {productLine}
+                  {productTail ? (
+                    <>
+                      <br />
+                      {productTail}
+                    </>
+                  ) : null}
                 </Typography>
               </div>
 

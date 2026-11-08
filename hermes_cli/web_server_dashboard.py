@@ -5,6 +5,7 @@ import asyncio
 import logging
 import json
 import os
+from html import escape as escape_html
 import threading
 import time
 from contextlib import contextmanager
@@ -204,7 +205,10 @@ def mount_spa(application: FastAPI):
         # Webapp reads it as the profile its gateway socket and REST answer for when a request names
         # none, so a tab on any other profile names that profile on every request.
         from hermes_cli.web_server_profiles import serving_profile_name as _serving_profile_name
+        from hermes_constants import brand_display_name
         serving_profile_js = json.dumps(_serving_profile_name()).replace("</", "<\\/")
+        product_name = brand_display_name()
+        product_js = json.dumps(product_name).replace("</", "<\\/")
         bootstrap_script = (
             f"<script>{token_js}"
             f"window.__HERMES_DASHBOARD_EMBEDDED_CHAT__={chat_js};"
@@ -213,8 +217,11 @@ def mount_spa(application: FastAPI):
             f"window.__HERMES_INITIAL_PROFILE__={initial_profile_js};"
             f"{surface_js}"
             f"window.__HERMES_DASHBOARD_PROFILE__={serving_profile_js};"
+            f"window.__HERMES_PRODUCT_NAME__={product_js};"
             f"</script>"
         )
+        html_title = f"<title>{escape_html(product_name)} - Dashboard</title>"
+        html = html.replace("<title>Hermes Agent - Dashboard</title>", html_title, 1)
         if prefix:
             # Rewrite absolute asset URLs baked into the Vite build to go through the proxy.
             for attr in ('href="/assets/', 'src="/assets/', 'href="/favicon.ico"', 'href="/fonts/',

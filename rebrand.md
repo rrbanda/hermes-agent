@@ -30,6 +30,22 @@ cat brand.json
 
 `brand.json` should show `"cli": "acme"` and `"name": "Acme"`. `pyproject.toml` must contain `acme = "hermes_cli.main:main"` and `acme-acp = "acp_adapter.entry:main"`. The `hermes-agent` script line stays. Run the same command again to replace a previous name.
 
+The line under the chat banner is optional. A renamed checkout shows no slogan until you set one:
+
+```bash
+python3 scripts/rebrand.py --cli acme --name "Acme" --tagline "Your banner line"
+```
+
+The banner shows that line exactly. Leave `--tagline` out of a later run to keep the previous line. `--tagline ""` removes it. Start the CLI or dashboard again after changing it. A Hermes checkout, with no tagline in `brand.json`, keeps its own slogan.
+
+The figure beside the session details is optional too. A renamed checkout shows no figure until you set one. Put the art in a text file, at most 30 lines and 80 columns:
+
+```bash
+python3 scripts/rebrand.py --cli acme --name "Acme" --hero-file ./mark.txt
+```
+
+The panel shows that art as you wrote it. Lines may use the existing color markup, such as `[#FFD700]your art[/]`. Leave `--hero-file` out of a later run to keep the previous figure. `--hero ""` removes it. A Hermes checkout keeps its caduceus. A skin that already has its own figure keeps that figure.
+
 ## 3. Commit and push before installing
 
 The installer resets this directory to `origin/main`. A rename that is not on `origin` is discarded.

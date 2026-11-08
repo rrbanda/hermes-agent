@@ -55,6 +55,28 @@ def test_the_dashboard_serves_index_html_and_its_bootstrap_as_on_main(monkeypatc
     assert "__HERMES_UI_SURFACE__" not in client.get("/").text
 
 
+def test_the_dashboard_page_uses_the_checkout_brand(monkeypatch, tmp_path):
+    import json
+
+    from hermes_constants import brand_display_name
+
+    name = brand_display_name()
+    (tmp_path / "index.html").write_text(
+        "<html><head><title>Hermes Agent - Dashboard</title></head><body></body></html>"
+    )
+    from hermes_cli import web_server as server
+    from hermes_cli.web_server_dashboard import mount_spa
+
+    app = FastAPI()
+    app.state.web_dist = tmp_path
+    monkeypatch.setattr(server, "app", app)
+    monkeypatch.delenv("HERMES_SERVE_HEADLESS", raising=False)
+    mount_spa(app)
+    page = TestClient(app).get("/").text
+    assert f"window.__HERMES_PRODUCT_NAME__={json.dumps(name)};" in page
+    assert f"<title>{name} - Dashboard</title>" in page
+
+
 def test_the_webapp_page_names_its_surface(monkeypatch, tmp_path):
     client = _spa(monkeypatch, tmp_path, surface="webapp", gated=False)
 

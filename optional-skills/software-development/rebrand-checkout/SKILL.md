@@ -34,16 +34,16 @@ Do not use this to rename Python modules, `HERMES_*` environment variables, the 
 Run this with `terminal` from the checkout root. `<cli>` is the command token. `<Name>` is the display name, one to 64 characters, one line.
 
 ```text
-python3 scripts/rebrand.py --cli <cli> --name "<Name>"
+python3 scripts/rebrand.py --cli <cli> --name "<Name>" --tagline "<line>"
 ```
 
-`<cli>` must match `^[a-z][a-z0-9-]{0,63}$`. The display name becomes `<Name> Agent`. The data directory stem becomes `.<cli>`. Example tokens `xyz` and `Xyz` are examples, not the only allowed brand. Running the script again replaces the previous brand.
+`<cli>` must match `^[a-z][a-z0-9-]{0,63}$`. The display name becomes `<Name> Agent`. The data directory stem becomes `.<cli>`. Example tokens `xyz` and `Xyz` are examples, not the only allowed brand. Running the script again replaces the previous brand. `--tagline` is optional. Omit it to keep an existing slogan. An empty `--tagline` clears it. A renamed checkout with no tagline shows no chat-banner slogan. `--hero-file` sets the session-panel figure from a text file of at most 30 lines and 80 columns. Omit it to keep an existing figure. `--hero ""` clears it. A renamed checkout with no figure shows none.
 
 ## Quick Reference
 
 | Item | After a rebrand |
 |---|---|
-| `brand.json` | `{"cli","name"}` written by the script |
+| `brand.json` | `{"cli","name"}`, plus optional `tagline` and `hero` |
 | `pyproject.toml` `[project.scripts]` | `<cli>` and `<cli>-acp` only. `hermes-agent` stays |
 | Command, banner, skin, help, fallback persona | `brand_cli`, `brand_name`, `brand_display_name`, `apply_brand` |
 | Data directory | `~/.<cli>` on POSIX, `<cli>` under LocalAppData on Windows |
@@ -76,7 +76,7 @@ Point `--hermes-home` at an empty directory. Do not reuse an existing Hermes dat
 ## Pitfalls
 
 - A global text replace of `hermes` breaks imports. The loader's word-boundary replace leaves `hermes-agent` and the docs host alone.
-- Skin defaults, the fallback identity, and the banner wordmark are fixed at import. Start a new process after changing `brand.json`.
+- Skin defaults, the fallback identity, the banner wordmark, and the banner tagline are fixed at import. Start a new process after changing `brand.json`.
 - An unedited Hermes `SOUL.md` is upgraded to the current brand. A file the user edited is left alone, including a persona seeded by a previous brand. Delete that unedited persona, or edit it, or the model keeps the old name.
 - The banner credits "Nous Research" only when the provider is `nous` or `nous-api`. A custom endpoint must not gain that credit.
 - `install.sh` against a dirty or unpushed checkout resets the brand back to whatever `origin` has.

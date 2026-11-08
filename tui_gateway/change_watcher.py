@@ -22,11 +22,19 @@ def skin_payload(config: dict) -> dict:
         from hermes_cli.skin_engine import init_skin_from_config, get_active_skin
         init_skin_from_config(config)
         skin = get_active_skin()
+        # The TUI's built-in art spells HERMES AGENT. A skin with no logo of its
+        # own gets the brand wordmark instead, so a renamed checkout does not
+        # keep that art. Hermes itself keeps the built-in art.
+        from hermes_constants import brand_cli
+        banner_logo = skin.banner_logo
+        if not banner_logo and brand_cli() != "hermes":
+            from hermes_cli.banner import _brand_agent_logo
+            banner_logo = _brand_agent_logo()
         # light/dark are paired palettes: the TUI prefers the block matching terminal polarity.
         return {
             "name": skin.name, "colors": skin.colors,
             "light_colors": skin.light_colors, "dark_colors": skin.dark_colors,
-            "branding": skin.branding, "banner_logo": skin.banner_logo,
+            "branding": skin.branding, "banner_logo": banner_logo,
             "banner_hero": skin.banner_hero, "tool_prefix": skin.tool_prefix,
             "help_header": (skin.branding or {}).get("help_header", ""),
             # Raw user CSS for the desktop GUI's <style> tag (32 KiB cap in the skin engine).
